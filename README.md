@@ -2,50 +2,51 @@
 
 Implementation of **Failure-uncertainty-aware joint production and maintenance under shared resources.**
 
-## Install
+## Installation
 
-Use Python 3.11 in an isolated environment, then run from the repository root:
+Requires Python >=3.10.
 
 ```bash
 python -m pip install -e .
 ```
 
-## Data
+Inspection environment: Python 3.13.5, NumPy 2.1.3 and SciPy 1.15.3. Verification covers Python syntax, JSON/TOML and README CLI options against parser definitions; training and evaluation were not run.
 
-`prepare` creates the configured controlled scheduling benchmark: job processing times, qualifications, releases, due dates and families; lifetime-fitting records; and independent design/evaluation random-number tapes. `instance.json` exposes the job schema. `lifetimes.npz` stores per-machine lifetimes and censoring indicators and can be replaced with equivalent prognostic training records. Simulation coefficients are explicit JSON fields.
+## Data and preprocessing
 
-## Workflow
+`prepare` generates a controlled scheduling benchmark with six machines, 48 jobs, three families, 14 shifts and independent design/evaluation random tapes. The included lifetime records are generated inputs; job, resource and simulation coefficients are defined in `config.json`.
 
 ```bash
-python -m maintplanai prepare
-python -m maintplanai fit
-python -m maintplanai run
-python -m maintplanai evaluate
-python -m maintplanai plot
+python -m maintplanai prepare --config config.json --output runs/full
 ```
 
-Main commands accept `--config config.json` and `--output runs/default`. Keep each seed/condition in its own output directory. The resolved configuration is written to `settings.json`.
+## Training and inference
 
-## Configuration
+```bash
+python -m maintplanai fit --config config.json --output runs/full
+python -m maintplanai run --config config.json --output runs/full
+```
 
-`machines,jobs,families,shifts,shift_hours` define scale. `technicians,kits,kit_lead_shifts` define shared resources. `candidate_plans,scenarios,risk_weight` control feasible-plan search and mean/CVaR valuation. Processing, setup, maintenance, repair, tardiness, stability and unfinished-work fields define the cost boundary. Power and inventory coefficients separately define electricity, GHG and material accounting. Training epochs, batch size, learning rate and seed use the defaults shown in `config.json` where applicable.
+`config.json` records the method settings and seed `13`; the resolved configuration is saved as `runs/full/settings.json`. Keep separate output directories for different seeds and variants.
+
+## Evaluation
+
+```bash
+python -m maintplanai evaluate --config config.json --output runs/full
+```
+
+## Ablations
+
+Supported controls: `MaintPlanAI`, `no-risk`, `point`, `two-stage`, `periodic`, `reactive`.
+
+The run command evaluates these controls together.
 
 ## Outputs
 
+All main outputs are written below `runs/full/`.
+
 `replications.csv` reports realized cost, downtime, tardiness, job moves, production, kit use, electricity, GHG, scrap and overtime. `action_cards.csv` compares maintain-now, next-shift and continue on common scenarios. `metrics.csv` aggregates risk/service/resource endpoints; `prognostic_metrics.csv` contains horizon-specific ECE and Brier score.
 
-## Implementation and controls
-
-A censored Weibull likelihood fits failure distributions. Constructive schedule candidates jointly vary maintenance placements and production order, then are ranked by sample-average loss plus CVaR. This finite search is the optimizer implementation. Nominal tasks fit inside shifts; failure-induced completion delays and known busy state carry forward. Only the first shift is executed. Spare replenishment persists between epochs, and stability compares against the previous look-ahead assignment. Idle electricity is included.
-
-Controls: `MaintPlanAI`, `no-risk`, `point`, `two-stage`, `periodic`, `reactive`. The run command evaluates the listed controls together.
-
 ```bash
-python -m maintplanai.compare --inputs "runs/*/replications.csv" --reference MaintPlanAI --metrics cost downtime greenhouse_gas --unit replication
+python -m maintplanai plot --config config.json --output runs/full
 ```
-
-The comparison command averages repeated rows within the specified independent unit, bootstraps units and applies paired Wilcoxon/Holm comparisons per metric.
-
-## Selected reproduction setting
-
-The default controlled benchmark is now six machines, 48 jobs, three families and 14 shifts, with two technicians/kits, 12 candidate plans, 32 design scenarios and five evaluation replications. The included generator, censored-Weibull fitting, rolling plan and independent evaluation tapes define a self-contained production/maintenance task. No private factory or public lifetime dataset is required for this selected setting. Use the prepare/fit/run/evaluate commands above.
