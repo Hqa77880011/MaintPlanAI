@@ -46,3 +46,6 @@ python -m maintplanai.compare --inputs "runs/*/replications.csv" --reference Mai
 
 The comparison command averages repeated rows within the specified independent unit, bootstraps units and applies paired Wilcoxon/Holm comparisons per metric.
 
+## Selected reproduction setting
+
+The default controlled benchmark is now six machines, 48 jobs, three families and 14 shifts, with two technicians/kits, 12 candidate plans, 32 design scenarios and five evaluation replications. The included generator, censored-Weibull fitting, rolling plan and independent evaluation tapes define a self-contained production/maintenance task. No private factory or public lifetime dataset is required for this selected setting. Use the prepare/fit/run/evaluate commands above.
